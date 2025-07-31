@@ -42,8 +42,16 @@ EOF
 # Start monitoring
 watch-now
 
-# Access API at http://localhost:9090/api/state
-# Stream updates at http://localhost:9090/sse
+# Or generate config automatically based on your project
+watch-now --init
+
+# Start with API on specific port
+watch-now --port 8080
+
+# Access API endpoints:
+# GET http://localhost:8080/api/status  - Current monitoring status
+# GET http://localhost:8080/api/events  - Server-Sent Events stream
+# GET http://localhost:8080/api/health  - Health check
 ```
 
 ## Features
@@ -94,7 +102,7 @@ Next check in 60 seconds... (Ctrl+C to stop)
 
 ## Configuration
 
-watch-now uses a `.watch-now.yaml` configuration file:
+watch-now uses a `.watch-now.yaml` configuration file. Run `watch-now --help` to see the complete format, or use `watch-now --init` to generate one automatically:
 
 ```yaml
 services:
