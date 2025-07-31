@@ -1,0 +1,84 @@
+# Complete acecam monorepo configuration
+# For when services are running (after `make dev`)
+
+# Service monitoring - based on acecam port conventions
+services:
+  - name: iam
+    type: rest
+    url: http://localhost:35050
+    health: /healthz
+    timeout: 5s
+    
+  - name: social
+    type: rest
+    url: http://localhost:35052
+    health: /healthz
+    timeout: 5s
+    
+  - name: analytics
+    type: rest
+    url: http://localhost:35054
+    health: /healthz
+    timeout: 5s
+    
+  - name: gaming
+    type: rest
+    url: http://localhost:35056
+    health: /healthz
+    timeout: 5s
+    
+  - name: notification
+    type: rest
+    url: http://localhost:35058
+    health: /healthz
+    timeout: 5s
+    
+  - name: logging
+    type: rest
+    url: http://localhost:35062
+    health: /healthz
+    timeout: 5s
+
+# Backend Go quality checks
+checks:
+  - name: format
+    command: make
+    args: ["fmt"]
+    timeout: 30s
+    
+  - name: lint
+    command: make
+    args: ["lint"]
+    timeout: 10s
+    
+  - name: complexity
+    command: make
+    args: ["complexity"]
+    timeout: 30s
+    
+  - name: deadcode
+    command: make
+    args: ["deadcode"]
+    timeout: 30s
+    
+  - name: docs
+    command: make
+    args: ["docs"]
+    timeout: 60s
+    
+  # Add these if you want to test build and tests
+  # - name: test
+  #   command: make
+  #   args: ["test"]
+  #   timeout: 120s
+  #
+  # - name: build
+  #   command: make
+  #   args: ["build"]
+  #   timeout: 180s
+
+interval: 30s
+
+api:
+  enabled: true
+  port: 9090

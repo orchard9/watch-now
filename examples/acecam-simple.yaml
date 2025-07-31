@@ -1,0 +1,38 @@
+# Simplified acecam monorepo configuration for testing
+# This only includes backend Go quality checks that should work without running services
+
+# No services configured - we'll just test the quality checks
+services: []
+
+# Code quality checks that match the acecam Makefile
+checks:
+  - name: format
+    command: make
+    args: ["fmt"]
+    timeout: 30s
+    
+  - name: lint
+    command: make
+    args: ["lint"]
+    timeout: 10s
+    
+  - name: complexity
+    command: make
+    args: ["complexity"]
+    timeout: 30s
+    
+  - name: deadcode
+    command: make
+    args: ["deadcode"]
+    timeout: 30s
+    
+  - name: docs
+    command: make
+    args: ["docs"]
+    timeout: 60s
+
+interval: 30s
+
+api:
+  enabled: true
+  port: 9090

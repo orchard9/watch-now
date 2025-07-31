@@ -1,0 +1,126 @@
+# Example watch-now configuration for acecam monorepo
+# Copy this to your acecam monorepo root as .watch-now.yaml
+
+# Service monitoring - REST endpoints
+services:
+  - name: iam
+    type: rest
+    url: http://localhost:35050
+    health: /health
+    timeout: 5s
+    
+  - name: social
+    type: rest
+    url: http://localhost:35052
+    health: /health
+    timeout: 5s
+    
+  - name: analytics
+    type: rest
+    url: http://localhost:35054
+    health: /health
+    timeout: 5s
+    
+  - name: gaming
+    type: rest
+    url: http://localhost:35056
+    health: /health
+    timeout: 5s
+    
+  - name: notification
+    type: rest
+    url: http://localhost:35058
+    health: /health
+    timeout: 5s
+    
+  - name: logging
+    type: rest
+    url: http://localhost:35062
+    health: /health
+    timeout: 5s
+
+# Infrastructure dependencies
+dependencies:
+  - name: postgres
+    type: rest
+    url: http://localhost:5432
+    timeout: 3s
+    
+  - name: redis
+    type: rest
+    url: http://localhost:6379
+    timeout: 3s
+    
+  - name: clickhouse
+    type: rest
+    url: http://localhost:8123
+    health: /ping
+    timeout: 3s
+
+# Code quality checks
+checks:
+  # Backend Go checks
+  - name: go-format
+    command: make
+    args: ["fmt"]
+    timeout: 30s
+    
+  - name: go-lint
+    command: make
+    args: ["lint"]
+    timeout: 60s
+    
+  - name: go-complexity
+    command: make
+    args: ["complexity"]
+    timeout: 30s
+    
+  - name: go-deadcode
+    command: make
+    args: ["deadcode"]
+    timeout: 30s
+    
+  - name: go-test
+    command: make
+    args: ["test"]
+    timeout: 120s
+    
+  - name: go-build
+    command: make
+    args: ["build"]
+    timeout: 180s
+    
+  # API documentation
+  - name: api-docs
+    command: make
+    args: ["docs"]
+    timeout: 60s
+    
+  # Frontend checks
+  - name: frontend-typecheck
+    command: sh
+    args: ["-c", "cd frontend && pnpm typecheck"]
+    timeout: 120s
+    
+  - name: frontend-lint
+    command: sh
+    args: ["-c", "cd frontend && pnpm lint"]
+    timeout: 60s
+    
+  - name: frontend-deadcode
+    command: sh
+    args: ["-c", "cd frontend && pnpm deadcode"]
+    timeout: 30s
+    
+  - name: frontend-test
+    command: sh
+    args: ["-c", "cd frontend && pnpm test"]
+    timeout: 120s
+
+# Monitoring configuration
+interval: 30s
+
+# API server for web UI
+api:
+  enabled: true
+  port: 9090
