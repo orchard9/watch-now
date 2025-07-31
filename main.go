@@ -41,6 +41,7 @@ func main() {
 	configPath := flag.String("config", ".watch-now.yaml", "Path to configuration file")
 	initConfig := flag.Bool("init", false, "Generate a configuration file for the current project")
 	port := flag.Int("port", 0, "Port for REST API (0 for ephemeral port)")
+	showExamples := flag.Bool("show-examples", false, "Show example configurations")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n\n", os.Args[0])
@@ -72,13 +73,46 @@ func main() {
 		fmt.Fprintf(os.Stderr, "  api:                           # REST API configuration\n")
 		fmt.Fprintf(os.Stderr, "    enabled: true                # Enable/disable API\n")
 		fmt.Fprintf(os.Stderr, "    port: 0                      # API port (0 = ephemeral)\n")
-		fmt.Fprintf(os.Stderr, "\nFor more examples, see: https://github.com/orchard9/watch-now/tree/main/examples\n")
+		fmt.Fprintf(os.Stderr, "\nExample Configuration:\n")
+		fmt.Fprintf(os.Stderr, "  # Monitoring a Go microservice project\n")
+		fmt.Fprintf(os.Stderr, "  services:\n")
+		fmt.Fprintf(os.Stderr, "    - name: api\n")
+		fmt.Fprintf(os.Stderr, "      type: rest\n")
+		fmt.Fprintf(os.Stderr, "      url: http://localhost:8080\n")
+		fmt.Fprintf(os.Stderr, "      health: /health\n")
+		fmt.Fprintf(os.Stderr, "      timeout: 5s\n")
+		fmt.Fprintf(os.Stderr, "    - name: worker\n")
+		fmt.Fprintf(os.Stderr, "      type: rest\n")
+		fmt.Fprintf(os.Stderr, "      url: http://localhost:8081\n")
+		fmt.Fprintf(os.Stderr, "      health: /healthz\n")
+		fmt.Fprintf(os.Stderr, "      timeout: 5s\n")
+		fmt.Fprintf(os.Stderr, "  \n")
+		fmt.Fprintf(os.Stderr, "  checks:\n")
+		fmt.Fprintf(os.Stderr, "    - name: test\n")
+		fmt.Fprintf(os.Stderr, "      command: go\n")
+		fmt.Fprintf(os.Stderr, "      args: [\"test\", \"./...\"]\n")
+		fmt.Fprintf(os.Stderr, "      timeout: 120s\n")
+		fmt.Fprintf(os.Stderr, "    - name: lint\n")
+		fmt.Fprintf(os.Stderr, "      command: golangci-lint\n")
+		fmt.Fprintf(os.Stderr, "      args: [\"run\"]\n")
+		fmt.Fprintf(os.Stderr, "      timeout: 60s\n")
+		fmt.Fprintf(os.Stderr, "  \n")
+		fmt.Fprintf(os.Stderr, "  interval: 30s\n")
+		fmt.Fprintf(os.Stderr, "  api:\n")
+		fmt.Fprintf(os.Stderr, "    enabled: true\n")
+		fmt.Fprintf(os.Stderr, "    port: 9090\n")
+		fmt.Fprintf(os.Stderr, "\nUse --show-examples to see more configuration examples.\n")
 	}
 
 	flag.Parse()
 
 	if *showVersion {
 		fmt.Printf("watch-now %s (commit: %s, built: %s)\n", version, commit, date)
+		os.Exit(0)
+	}
+
+	if *showExamples {
+		showExampleConfigurations()
 		os.Exit(0)
 	}
 
@@ -478,4 +512,193 @@ func getCurrentDir() string {
 		return "unknown"
 	}
 	return dir
+}
+
+func showExampleConfigurations() {
+	fmt.Println(bold.Sprint("watch-now Example Configurations"))
+	fmt.Println("================================================================================")
+	
+	fmt.Println("\n" + blue.Sprint("1. Simple Go Project"))
+	fmt.Println("------------------------------")
+	fmt.Println(`# Basic Go project with standard make targets
+checks:
+  - name: test
+    command: go
+    args: ["test", "./..."]
+    timeout: 120s
+  - name: build
+    command: go
+    args: ["build", "./..."]
+    timeout: 180s
+  - name: fmt
+    command: gofmt
+    args: ["-l", "."]
+    timeout: 30s
+
+interval: 60s`)
+
+	fmt.Println("\n" + blue.Sprint("2. Node.js Full Stack Application"))
+	fmt.Println("------------------------------")
+	fmt.Println(`# Node.js app with frontend and backend services
+services:
+  - name: backend
+    type: rest
+    url: http://localhost:3000
+    health: /api/health
+    timeout: 5s
+  - name: frontend
+    type: rest
+    url: http://localhost:3001
+    health: /
+    timeout: 5s
+
+checks:
+  - name: lint
+    command: npm
+    args: ["run", "lint"]
+    timeout: 60s
+  - name: test
+    command: npm
+    args: ["test"]
+    timeout: 120s
+  - name: typecheck
+    command: npm
+    args: ["run", "typecheck"]
+    timeout: 60s
+
+interval: 30s
+api:
+  enabled: true
+  port: 9090`)
+
+	fmt.Println("\n" + blue.Sprint("3. Microservices with Docker"))
+	fmt.Println("------------------------------")
+	fmt.Println(`# Multiple services with infrastructure checks
+services:
+  - name: auth-service
+    type: rest
+    url: http://localhost:8080
+    health: /health
+    timeout: 5s
+    headers:
+      Authorization: "Bearer dev-token"
+  - name: user-service
+    type: rest
+    url: http://localhost:8081
+    health: /health
+    timeout: 5s
+  - name: payment-service
+    type: rest
+    url: http://localhost:8082
+    health: /healthz
+    timeout: 10s
+
+checks:
+  - name: docker-compose
+    command: docker-compose
+    args: ["ps"]
+    timeout: 10s
+  - name: integration-tests
+    command: make
+    args: ["test-integration"]
+    timeout: 300s
+
+interval: 60s
+api:
+  enabled: true
+  port: 0  # Use ephemeral port`)
+
+	fmt.Println("\n" + blue.Sprint("4. Python Data Science Project"))
+	fmt.Println("------------------------------")
+	fmt.Println(`# Python project with notebook and API monitoring
+services:
+  - name: jupyter
+    type: rest
+    url: http://localhost:8888
+    health: /api
+    timeout: 5s
+  - name: model-api
+    type: rest
+    url: http://localhost:5000
+    health: /health
+    timeout: 5s
+
+checks:
+  - name: pytest
+    command: pytest
+    args: ["-v"]
+    timeout: 180s
+  - name: mypy
+    command: mypy
+    args: ["."]
+    timeout: 60s
+  - name: black
+    command: black
+    args: ["--check", "."]
+    timeout: 30s
+  - name: notebook-test
+    command: pytest
+    args: ["--nbval", "notebooks/"]
+    timeout: 300s
+
+interval: 60s`)
+
+	fmt.Println("\n" + blue.Sprint("5. Monorepo with Multiple Services"))
+	fmt.Println("------------------------------")
+	fmt.Println(`# Large monorepo with service discovery
+services:
+  - name: api-gateway
+    type: rest
+    url: http://localhost:8000
+    health: /health
+    timeout: 5s
+  - name: service-a
+    type: rest
+    url: http://localhost:8001
+    health: /health
+    timeout: 5s
+  - name: service-b
+    type: rest
+    url: http://localhost:8002
+    health: /health
+    timeout: 5s
+  - name: service-c
+    type: grpc
+    url: localhost:9001
+    health: /grpc.health.v1.Health/Check
+    timeout: 5s
+
+checks:
+  - name: lint-all
+    command: make
+    args: ["lint"]
+    timeout: 180s
+  - name: test-unit
+    command: make
+    args: ["test-unit"]
+    timeout: 300s
+  - name: test-integration
+    command: make
+    args: ["test-integration"]
+    timeout: 600s
+  - name: build-all
+    command: make
+    args: ["build"]
+    timeout: 300s
+  - name: security-scan
+    command: make
+    args: ["security-scan"]
+    timeout: 120s
+
+interval: 120s
+api:
+  enabled: true
+  port: 9090`)
+
+	fmt.Println("\n================================================================================")
+	fmt.Println("To use any example:")
+	fmt.Println("1. Copy the configuration to .watch-now.yaml")
+	fmt.Println("2. Adjust ports, commands, and timeouts for your project")
+	fmt.Println("3. Run 'watch-now' to start monitoring")
+	fmt.Println("\nOr use 'watch-now --init' to auto-generate a configuration for your project.")
 }
