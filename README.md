@@ -2,6 +2,16 @@
 
 A universal development monitor that provides real-time health visibility for any software project.
 
+## Installation
+
+```bash
+# Quick install with curl
+curl -sSfL https://raw.githubusercontent.com/orchard9/watch-now/main/install.sh | bash
+
+# Or using go install
+go install github.com/orchard9/watch-now@latest
+```
+
 ## Overview
 
 watch-now is a configuration-driven monitoring tool that provides comprehensive health monitoring for:
