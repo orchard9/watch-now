@@ -4,12 +4,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"strings"
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/orchard9/watch-now/internal/api"
 	"github.com/orchard9/watch-now/internal/config"
 	"github.com/orchard9/watch-now/internal/core"
 	"github.com/orchard9/watch-now/internal/detector"
@@ -38,7 +40,8 @@ func main() {
 	runOnce := flag.Bool("once", false, "Run once and exit")
 	configPath := flag.String("config", ".watch-now.yaml", "Path to configuration file")
 	initConfig := flag.Bool("init", false, "Generate a configuration file for the current project")
-	
+	port := flag.Int("port", 0, "Port for REST API (0 for ephemeral port)")
+
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [options]\n\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "watch-now is a universal development monitor for code quality and service health.\n\n")
@@ -48,9 +51,10 @@ func main() {
 		fmt.Fprintf(os.Stderr, "  %s --init                    Generate configuration for current project\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "  %s --once                    Run monitoring once and exit\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "  %s --config custom.yaml      Use custom configuration file\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s --port 8080               Set API port (enables API)\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "  %s                           Start continuous monitoring\n", os.Args[0])
 	}
-	
+
 	flag.Parse()
 
 	if *showVersion {
@@ -65,6 +69,12 @@ func main() {
 
 	// Load configuration and initialize engine
 	engine, cfg := initializeEngine(*configPath)
+
+	// Override API port if specified via flag
+	if *port != 0 {
+		cfg.API.Port = *port
+		cfg.API.Enabled = true
+	}
 
 	// Print header
 	printHeader()
@@ -136,8 +146,19 @@ func runOnceMode(ctx context.Context, engine *core.Engine) {
 
 func runContinuousMode(ctx context.Context, engine *core.Engine, cfg *config.Config) {
 	fmt.Printf("Monitoring every %v. Press Ctrl+C to stop.\n", cfg.Interval)
-	if cfg.API.Enabled && cfg.API.Port > 0 {
-		fmt.Printf("API enabled at http://localhost:%d\n", cfg.API.Port)
+
+	// Start API server if needed
+	var apiServer *api.Server
+	if cfg.API.Enabled {
+		apiServer = api.NewServer(engine, cfg.API.Port)
+		go func() {
+			if err := apiServer.Start(); err != nil {
+				log.Printf("API server error: %v", err)
+			}
+		}()
+		fmt.Printf("API enabled at http://localhost:%d\n", apiServer.Port())
+		fmt.Printf("  Status: http://localhost:%d/api/status\n", apiServer.Port())
+		fmt.Printf("  Events: http://localhost:%d/api/events\n", apiServer.Port())
 	}
 	fmt.Println("================================================================================")
 
@@ -157,6 +178,13 @@ func runContinuousMode(ctx context.Context, engine *core.Engine, cfg *config.Con
 	// Display results periodically
 	ticker := time.NewTicker(5 * time.Second) // Update display every 5 seconds
 	defer ticker.Stop()
+
+	// Clean up API server on exit
+	defer func() {
+		if apiServer != nil {
+			_ = apiServer.Stop()
+		}
+	}()
 
 	for {
 		select {
