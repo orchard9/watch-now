@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sort"
 	"strings"
 	"time"
 
@@ -272,6 +273,13 @@ func runMonitor(engine *core.Engine) {
 		}
 	}
 
+	sort.Slice(serviceResults, func(i, j int) bool {
+		return strings.ToLower(serviceResults[i].Name) < strings.ToLower(serviceResults[j].Name)
+	})
+	sort.Slice(qualityResults, func(i, j int) bool {
+		return strings.ToLower(qualityResults[i].Name) < strings.ToLower(qualityResults[j].Name)
+	})
+
 	// Display services
 	if len(serviceResults) > 0 {
 		fmt.Printf("\n%s Services:\n", blue.Sprint("SERVICES"))
@@ -331,10 +339,17 @@ func displayResult(result *monitors.Result) {
 		statusText = "INFO"
 	}
 
+	message := result.Message
+	if (result.Type == monitors.TypeREST || result.Type == monitors.TypeGRPC) && result.Metadata != nil {
+		if urlValue, ok := result.Metadata["url"].(string); ok && urlValue != "" {
+			message = fmt.Sprintf("%s @ %s", message, urlValue)
+		}
+	}
+
 	fmt.Printf("  %s %s - %s\n",
 		statusColor.Sprintf("[%s]", statusText),
 		result.Name,
-		result.Message)
+		message)
 }
 
 func getOverallStatus(results map[string]*monitors.Result) monitors.Status {
@@ -517,7 +532,7 @@ func getCurrentDir() string {
 func showExampleConfigurations() {
 	fmt.Println(bold.Sprint("watch-now Example Configurations"))
 	fmt.Println("================================================================================")
-	
+
 	fmt.Println("\n" + blue.Sprint("1. Simple Go Project"))
 	fmt.Println("------------------------------")
 	fmt.Println(`# Basic Go project with standard make targets

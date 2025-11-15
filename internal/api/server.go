@@ -6,6 +6,8 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/orchard9/watch-now/internal/core"
@@ -99,28 +101,13 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	results := s.engine.State().GetAll()
-
-	// Group results by type
-	var services []*monitors.Result
-	var checks []*monitors.Result
-
-	for _, result := range results {
-		switch result.Type {
-		case monitors.TypeQuality:
-			checks = append(checks, result)
-		case monitors.TypeREST, monitors.TypeGRPC:
-			services = append(services, result)
-		}
-	}
-
-	// Determine overall status
-	overall := s.getOverallStatus(results)
+	services, checks := groupAndSortResults(results)
 
 	response := StatusResponse{
 		Timestamp: time.Now().Format("2006-01-02T15:04:05Z07:00"),
 		Services:  services,
 		Checks:    checks,
-		Overall:   string(overall),
+		Overall:   string(s.getOverallStatus(results)),
 		Results:   results,
 	}
 
@@ -183,11 +170,18 @@ func (s *Server) sendSSEEvent(w http.ResponseWriter, event string, data interfac
 
 func (s *Server) getStatusData() StatusResponse {
 	results := s.engine.State().GetAll()
+	services, checks := groupAndSortResults(results)
 
-	// Group results by type
-	var services []*monitors.Result
-	var checks []*monitors.Result
+	return StatusResponse{
+		Timestamp: time.Now().Format("2006-01-02T15:04:05Z07:00"),
+		Services:  services,
+		Checks:    checks,
+		Overall:   string(s.getOverallStatus(results)),
+		Results:   results,
+	}
+}
 
+func groupAndSortResults(results map[string]*monitors.Result) (services []*monitors.Result, checks []*monitors.Result) {
 	for _, result := range results {
 		switch result.Type {
 		case monitors.TypeQuality:
@@ -197,16 +191,14 @@ func (s *Server) getStatusData() StatusResponse {
 		}
 	}
 
-	// Determine overall status
-	overall := s.getOverallStatus(results)
+	sort.Slice(services, func(i, j int) bool {
+		return strings.ToLower(services[i].Name) < strings.ToLower(services[j].Name)
+	})
+	sort.Slice(checks, func(i, j int) bool {
+		return strings.ToLower(checks[i].Name) < strings.ToLower(checks[j].Name)
+	})
 
-	return StatusResponse{
-		Timestamp: time.Now().Format("2006-01-02T15:04:05Z07:00"),
-		Services:  services,
-		Checks:    checks,
-		Overall:   string(overall),
-		Results:   results,
-	}
+	return services, checks
 }
 
 func (s *Server) getOverallStatus(results map[string]*monitors.Result) monitors.Status {
