@@ -6,10 +6,16 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/orchard9/watch-now/internal/config"
 )
+
+// Global mutex to prevent concurrent golangci-lint execution
+// golangci-lint uses file-based locking and fails with exit code 2
+// when multiple instances try to run simultaneously
+var golangciLintMutex sync.Mutex
 
 type QualityMonitor struct {
 	name    string
@@ -35,8 +41,31 @@ func (m *QualityMonitor) Type() MonitorType {
 	return TypeQuality
 }
 
+// isGolangciLint checks if this monitor is running golangci-lint
+func (m *QualityMonitor) isGolangciLint() bool {
+	// Check if command is golangci-lint
+	if strings.Contains(m.command, "golangci-lint") {
+		return true
+	}
+	// Check if any args contain golangci-lint (e.g., via make)
+	for _, arg := range m.args {
+		if strings.Contains(arg, "lint") {
+			// This is a lint command via make - assume it runs golangci-lint
+			return true
+		}
+	}
+	return false
+}
+
 func (m *QualityMonitor) Check(ctx context.Context) (*Result, error) {
 	start := time.Now()
+
+	// Serialize golangci-lint execution to prevent file lock contention
+	// golangci-lint uses file-based locking and fails when run concurrently
+	if m.isGolangciLint() {
+		golangciLintMutex.Lock()
+		defer golangciLintMutex.Unlock()
+	}
 
 	// Create context with timeout
 	checkCtx, cancel := context.WithTimeout(ctx, m.timeout)

@@ -189,7 +189,9 @@ func runOnceMode(ctx context.Context, engine *core.Engine) {
 	time.Sleep(100 * time.Millisecond) // Give monitors time to start
 
 	// Wait for initial results
-	waitForResults(engine, 10*time.Second)
+	// Increased timeout to 60s to accommodate sequential golangci-lint execution
+	// (5 services × ~10s per lint check = ~50s + 10s buffer)
+	waitForResults(engine, 60*time.Second)
 	runMonitor(engine)
 
 	// Exit with appropriate code
